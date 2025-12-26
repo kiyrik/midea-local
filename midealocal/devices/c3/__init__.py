@@ -19,6 +19,7 @@ from .message import (
     MessageSetDisinfect,
     MessageSetECO,
     MessageSetSilent,
+    MessageQueryUnitPara,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -100,10 +101,25 @@ class MideaC3Device(MideaDevice):
                 DeviceAttributes.total_produced_energy: None,
                 DeviceAttributes.outdoor_temperature: None,
                 DeviceAttributes.error_code: 0,
+                DeviceAttributes.fg_defrost: False,
+                DeviceAttributes.unit_mode_run: None,
+                DeviceAttributes.comp_run_freq: None,
+                DeviceAttributes.exv_current: None,
+                DeviceAttributes.pressure_high: None,
+                DeviceAttributes.pressure_low: None,
+                DeviceAttributes.water_flower: None,
+                DeviceAttributes.water_pressure: None,
+                DeviceAttributes.temp_t4: None,
+                DeviceAttributes.temp_t5: None,
+                DeviceAttributes.instant_power0: None,
+                DeviceAttributes.instant_renew_power0: None
             },
         )
         self._default_temperature_step: float = 0.5
         self._temperature_step: float = 0.5
+        # Optional extra queries toggle (disabled by default)
+        # Use a generic name to allow more advanced blocks later.
+        self._enable_advanced_params: bool = False
         self.set_customize(customize)
 
     @property
@@ -118,12 +134,15 @@ class MideaC3Device(MideaDevice):
 
     def build_query(self) -> list[MessageQuery]:
         """Midea C3 device build query."""
-        return [
+        queries: list[MessageQuery] = [
             MessageQueryBasic(self._message_protocol_version),
             MessageQueryDisinfect(self._message_protocol_version),
             MessageQuerySilence(self._message_protocol_version),
             MessageQueryECO(self._message_protocol_version),
         ]
+        if self._enable_advanced_params:
+            queries.append(MessageQueryUnitPara(self._message_protocol_version))
+        return queries
 
     def process_message(self, msg: bytes) -> dict[str, Any]:
         """Midea C3 device process message."""
@@ -307,26 +326,43 @@ class MideaC3Device(MideaDevice):
         self.build_send(message)
 
     def set_customize(self, customize: str) -> None:
-        """Midea C3 device set customize."""
+        """Midea C3 device set customize.
+
+        Supports keys:
+        - temperature_step: number
+        - enable_advanced_params: bool (optionally nested under key "c3")
+        """
         self._temperature_step = self._default_temperature_step
+        self._enable_advanced_params = False
         if customize and len(customize) > 0:
             try:
                 params = json.loads(customize)
-                if params and "temperature_step" in params:
-                    temp_step = params.get("temperature_step")
-                    if isinstance(temp_step, float | int):
-                        self._temperature_step = float(temp_step)
-                    else:
-                        _LOGGER.error(
-                            "[%s] Invalid type for temperature_step: %s",
-                            self.device_id,
-                            temp_step,
-                        )
+                if isinstance(params, dict):
+                    # temperature step
+                    if "temperature_step" in params:
+                        temp_step = params.get("temperature_step")
+                        if isinstance(temp_step, (float, int)):
+                            self._temperature_step = float(temp_step)
+                        else:
+                            _LOGGER.error(
+                                "[%s] Invalid type for temperature_step: %s",
+                                self.device_id,
+                                temp_step,
+                            )
+                    # optional advanced params toggle (enables UnitPara now)
+                    adv_val = None
+                    c3_cfg = params.get("c3")
+                    if isinstance(c3_cfg, dict):
+                        adv_val = c3_cfg.get("enable_advanced_params")
+                    if adv_val is None:
+                        adv_val = params.get("enable_advanced_params")
+                    self._enable_advanced_params = bool(adv_val)
             except json.JSONDecodeError:
                 _LOGGER.exception(
                     "[%s] JSON decode error in set_customize",
                     self.device_id,
                 )
+            # reflect configured step in attributes
             self.update_all({"temperature_step": self._temperature_step})
 
 

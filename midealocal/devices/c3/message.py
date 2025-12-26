@@ -496,3 +496,10 @@ class MessageC3Response(MessageResponse):
         elif self.body_type == ListTypes.X10:
             self.set_body(C3UnitParaBody(super().body, data_offset=1))
         self.set_attr()
+
+        # Derived flags
+        try:
+            self.fg_defrost = (body[data_offset + 29] & 0x02) > 0
+        except Exception:
+            self.fg_defrost = False
+

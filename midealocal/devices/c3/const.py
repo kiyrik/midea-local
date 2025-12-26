@@ -47,6 +47,18 @@ class DeviceAttributes(StrEnum):
     eco_mode = "eco_mode"
     tbh = "tbh"
     error_code = "error_code"
+    fg_defrost = "fg_defrost"
+    unit_mode_run = "unit_mode_run"
+    comp_run_freq = "comp_run_freq"
+    exv_current = "exv_current"
+    pressure_high = "pressure_high"
+    pressure_low = "pressure_low"
+    water_flower = "water_flower"
+    water_pressure = "water_pressure"
+    temp_t4 = "temp_t4"
+    temp_t5 = "temp_t5"
+    instant_power0 = "instant_power0"
+    instant_renew_power0 = "instant_renew_power0"
 
 
 class C3SilentLevel(IntEnum):

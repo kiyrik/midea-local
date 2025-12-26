@@ -84,6 +84,23 @@ class MideaCLI:
 
         return {**cloud_keys, **default_keys}
 
+    def _customize_str(self) -> str:
+        """Build customize JSON string from CLI options."""
+        data: dict[str, Any] = {}
+        # Parse raw customize if provided
+        raw = getattr(self.namespace, "customize", None)
+        if raw:
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, dict):
+                    data.update(parsed)
+            except Exception:
+                _LOGGER.exception("Invalid JSON for --customize, ignoring: %s", raw)
+        # Merge enable_advanced_params flag
+        if getattr(self.namespace, "enable_advanced_params", False):
+            data["enable_advanced_params"] = True
+        return json.dumps(data) if data else ""
+
     async def discover(self) -> list[MideaDevice]:
         """Discover device information."""
         device_list: list[MideaDevice] = []
@@ -119,7 +136,7 @@ class MideaCLI:
                     device_protocol=device["protocol"],
                     model=device["model"],
                     subtype=0,
-                    customize="",
+                    customize=self._customize_str(),
                 )
                 _LOGGER.debug("Opening socket for device.")
                 if dev.connect():
@@ -155,7 +172,7 @@ class MideaCLI:
             token="",
             key="",
             subtype=0,
-            customize="",
+            customize=self._customize_str(),
         )
 
         result = device.process_message(self.namespace.message)
@@ -344,6 +361,18 @@ def main() -> NoReturn:
         type=str,
         help="Set Cloud name",
         choices=SUPPORTED_CLOUDS.keys(),
+    )
+    common_parser.add_argument(
+        "--customize",
+        type=str,
+        default="",
+        help="Customize JSON passed to device (e.g. {\"enable_advanced_params\": true}).",
+    )
+    common_parser.add_argument(
+        "--enable-advanced-params",
+        help="Enable advanced parameters polling (e.g. UNITPARA for C3).",
+        default=False,
+        action=BooleanOptionalAction,
     )
 
     # Setup discover parser
