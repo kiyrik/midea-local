@@ -114,7 +114,7 @@ class MideaC3Device(MideaDevice):
                 DeviceAttributes.fan_speed: None,
                 DeviceAttributes.supply_voltage: None,
                 DeviceAttributes.dc_current: None,
-                DeviceAttributes.compressor_current: None,
+                DeviceAttributes.odu_comp_current: None,
                 DeviceAttributes.dc_bus_voltage: None,
                 DeviceAttributes.current_unit_capacity: None,
                 DeviceAttributes.current_unit_capacity_kw: None,
@@ -202,16 +202,17 @@ class MideaC3Device(MideaDevice):
         except Exception:
             pass
         # Fallback: if Energy body didn't provide outdoor_temperature this cycle,
-        # derive from UnitPara ambient temp (temp_ta, signed) when available.
+        # derive from UnitPara outdoor sensor when available. Prefer T4 here,
+        # as Lua maps Energy outdoor temp to T4.
         if (
             DeviceAttributes.outdoor_temperature.value not in new_status
-            and hasattr(message, "temp_ta")
+            and hasattr(message, "temp_t4")
         ):
             self._attributes[DeviceAttributes.outdoor_temperature] = getattr(
-                message, "temp_ta"
+                message, "temp_t4"
             )
             new_status[DeviceAttributes.outdoor_temperature.value] = getattr(
-                message, "temp_ta"
+                message, "temp_t4"
             )
         if "zone_temp_type" in new_status:
             for zone in [0, 1]:

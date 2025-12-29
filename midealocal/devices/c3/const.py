@@ -59,7 +59,7 @@ class DeviceAttributes(StrEnum):
     fan_speed = "fan_speed"
     supply_voltage = "supply_voltage"
     dc_current = "dc_current"
-    compressor_current = "compressor_current"
+    odu_comp_current = "odu_comp_current"
     current_unit_capacity_kw = "current_unit_capacity_kw"
     dc_bus_voltage = "dc_bus_voltage"
     current_unit_capacity = "current_unit_capacity"

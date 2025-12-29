@@ -307,7 +307,7 @@ class C3BasicBody(MessageBody):
         self.HMIEnergyAnaSetEN = body[data_offset + 23] & 0x40 > 0
         # Optional extended curve type fields if present (Lua: [25], [26])
         try:
-            if len(body) > (data_offset + 26):
+            if len(body) >= (data_offset + 26):
                 self.zone1_curve_type = body[data_offset + 24]
                 self.zone2_curve_type = body[data_offset + 25]
         except Exception:
