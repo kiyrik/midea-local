@@ -1,4 +1,4 @@
-"""Midea local C3 message."""
+﻿"""Midea local C3 message."""
 
 from midealocal.const import DeviceType
 from midealocal.message import (
@@ -12,6 +12,11 @@ from midealocal.message import (
 from .const import C3SilentLevel
 
 TEMP_NEG_VALUE = 127
+
+
+def s8(val: int) -> int:
+    """Return signed int8 (-128..127) from a single byte value."""
+    return ((val + 128) & 0xFF) - 128
 
 
 class MessageC3Base(MessageRequest):
@@ -129,6 +134,9 @@ class MessageSet(MessageC3Base):
         self.zone2_curve = False
         self.fast_dhw = False
         self.tbh = False
+        # Optional extended fields
+        self.zone1_curve_type: int | None = None
+        self.zone2_curve_type: int | None = None
 
     @property
     def _body(self) -> bytearray:
@@ -145,17 +153,20 @@ class MessageSet(MessageC3Base):
         zone1_target_temp = int(self.zone_target_temp[0])
         zone2_target_temp = int(self.zone_target_temp[1])
         dhw_target_temp = int(self.dhw_target_temp)
-        return bytearray(
-            [
-                zone1_power | zone2_power | dhw_power,
-                self.mode,
-                zone1_target_temp,
-                zone2_target_temp,
-                dhw_target_temp,
-                room_target_temp,
-                zone1_curve | zone2_curve | tbh | fast_dhw,
-            ],
-        )
+        parts = [
+            zone1_power | zone2_power | dhw_power,
+            self.mode,
+            zone1_target_temp,
+            zone2_target_temp,
+            dhw_target_temp,
+            room_target_temp,
+            zone1_curve | zone2_curve | tbh | fast_dhw,
+        ]
+        # If curve types are provided, append them as extended bytes
+        if self.zone1_curve_type is not None or self.zone2_curve_type is not None:
+            parts.append(int(self.zone1_curve_type or 0) & 0xFF)
+            parts.append(int(self.zone2_curve_type or 0) & 0xFF)
+        return bytearray(parts)
 
 
 class MessageSetSilent(MessageC3Base):
@@ -294,6 +305,13 @@ class C3BasicBody(MessageBody):
         self.tbh_control = body[data_offset + 23] & 0x80 > 0
         self.SysEnergyAnaEN = body[data_offset + 23] & 0x20 > 0
         self.HMIEnergyAnaSetEN = body[data_offset + 23] & 0x40 > 0
+        # Optional extended curve type fields if present (Lua: [25], [26])
+        try:
+            if len(body) > (data_offset + 26):
+                self.zone1_curve_type = body[data_offset + 24]
+                self.zone2_curve_type = body[data_offset + 25]
+        except Exception:
+            pass
 
 
 class C3EnergyBody(MessageBody):
@@ -328,9 +346,8 @@ class C3EnergyBody(MessageBody):
             + (body[data_offset + 8])
         )
         base_value = body[data_offset + 9]
-        self.outdoor_temperature = float(
-            (base_value - 256) if base_value > TEMP_NEG_VALUE else base_value,
-        )  # outdoor_temperature is t4
+        # outdoor_temperature is t4; signed byte
+        self.outdoor_temperature = float(s8(base_value))
         self.zone1_temp_set = float(body[data_offset + 10])
         self.zone2_temp_set = float(body[data_offset + 11])
         self.t5s = body[data_offset + 12]
@@ -395,13 +412,13 @@ class C3UnitParaBody(MessageBody):
         super().__init__(body)
         self.comp_run_freq = body[data_offset]
         self.unit_mode_run = body[data_offset + 1]
-        self.fan_speed = body[data_offset + 3] * 10
+        self.fan_speed = body[data_offset + 2] * 10
         self.fg_capacity_need = body[data_offset + 5]
-        self.temp_t3 = body[data_offset + 6]
-        self.temp_t4 = body[data_offset + 7]
-        self.temp_tp = body[data_offset + 8]
-        self.temp_tw_in = body[data_offset + 9]
-        self.temp_tw_out = body[data_offset + 10]
+        self.temp_t3 = s8(body[data_offset + 6])
+        self.temp_t4 = s8(body[data_offset + 7])
+        self.temp_tp = s8(body[data_offset + 8])
+        self.temp_tw_in = s8(body[data_offset + 9])
+        self.temp_tw_out = s8(body[data_offset + 10])
         self.temp_tsolar = body[data_offset + 11]
         self.hydbox_subtype = body[data_offset + 12]
         self.fg_usb_info_connect = body[data_offset + 13]
@@ -412,27 +429,35 @@ class C3UnitParaBody(MessageBody):
         self.odu_model = body[data_offset + 21]
         # self.unit_online_num  body[data_offset + 22]
         # self.current_code  body[data_offset + 23]
-        self.temp_t1 = body[data_offset + 33]
-        self.temp_tw2 = body[data_offset + 34]
-        self.temp_t2 = body[data_offset + 35]
-        self.temp_t2b = body[data_offset + 36]
-        self.temp_t5 = body[data_offset + 37]
-        self.temp_ta = body[data_offset + 38]
+        self.temp_t1 = s8(body[data_offset + 33])
+        self.temp_tw2 = s8(body[data_offset + 34])
+        self.temp_t2 = s8(body[data_offset + 35])
+        self.temp_t2b = s8(body[data_offset + 36])
+        self.temp_t5 = s8(body[data_offset + 37])
+        self.temp_ta = s8(body[data_offset + 38])
         self.temp_tb_t1 = body[data_offset + 39]
         self.temp_tb_t2 = body[data_offset + 40]
         self.hydrobox_capacity = body[data_offset + 41]
         self.pressure_high = body[data_offset + 42] * 256 + body[data_offset + 43]
         self.pressure_low = body[data_offset + 44] * 256 + body[data_offset + 45]
-        self.temp_th = body[data_offset + 46]
+        self.temp_th = s8(body[data_offset + 46])
         self.machine_type = body[data_offset + 47]
         self.odu_target_fre = body[data_offset + 48]
         self.dc_current = body[data_offset + 49]
-        self.temp_tf = body[data_offset + 51]
+        try:
+            # dcVoltage appears in decivolts; scale to volts
+            self.dc_bus_voltage = int(body[data_offset + 50]) * 10
+        except Exception:
+            self.dc_bus_voltage = None
+        self.temp_tf = s8(body[data_offset + 51])
         self.idu_t1s1 = body[data_offset + 52]
         self.idu_t1s2 = body[data_offset + 53]
+        # Water flow raw counter; use water_flow_m3h for scaled value (m�/h)
         self.water_flower = body[data_offset + 54] * 256 + body[data_offset + 55]
         self.odu_plan_vol_lmt = body[data_offset + 56]
-        self.current_unit_capacity = body[data_offset + 57]
+        self.current_unit_capacity = (
+            (body[data_offset + 57] << 8) + body[data_offset + 58]
+        )
         self.sphera_ahs_voltage = body[data_offset + 59]
         self.temp_t4a_ver = body[data_offset + 60]
         self.water_pressure = body[data_offset + 61] * 256 + body[data_offset + 62]
@@ -472,23 +497,43 @@ class C3UnitParaBody(MessageBody):
 
         # Derived flags from UnitPara
         # defrosting_status bit according to Lua (byte 29, bit1)
+        # Lua uses 1-based indexing; our body uses data_offset=1, so use +28 here
         try:
-            self.defrosting_status = (body[data_offset + 29] & 0x02) > 0
+            self.defrosting_status = (body[data_offset + 28] & 0x02) > 0
         except Exception:
             # keep compatibility if payload shorter
             self.defrosting_status = False
+        # Additional flags decoded from UnitPara (per Lua mapping)
         try:
-            self.water_flow_m3h = float(self.water_flower) / 1000.0
+            b29 = body[data_offset + 28]
+            b30 = body[data_offset + 29]
+            b31 = body[data_offset + 30]
+            b33 = body[data_offset + 32]
+            # Byte 29
+            self.back_oil = (b29 & 0x08) > 0  # fgBackOil, BIT3
+            # Byte 30
+            self.tbh_enable = (b30 & 0x80) > 0  # fgTBHEnable, BIT7
+            self.ibh1_enable = (b30 & 0x04) > 0  # fgIBH1Enable, BIT2
+            # Byte 31
+            self.dhw_run = (b31 & 0x20) > 0  # fgDHWRun, BIT5
+            self.heat_run = (b31 & 0x10) > 0  # fgHeatRun, BIT4
+            self.cool_run = (b31 & 0x08) > 0  # fgCoolRun, BIT3
+            # Byte 33
+            self.tbh_output = (b33 & 0x04) > 0  # fgTBHOutput, BIT2
+            self.ibh2_output = (b33 & 0x02) > 0  # fgIBH2Output, BIT1
+            self.ibh1_output = (b33 & 0x01) > 0  # fgIBH1Output, BIT0
+        except Exception:
+            pass
+        try:
+            # Scale: raw value / 100.0 → m³/h (matches ~0.62 m³/h when raw ~62)
+            self.water_flow_m3h = float(self.water_flower) / 100.0
         except Exception:
             self.water_flow_m3h = None
         try:
             self.current_unit_capacity_kw = float(self.current_unit_capacity) / 100.0
         except Exception:
             self.current_unit_capacity_kw = None
-        self.supply_voltage = self.sphera_ahs_voltage
-        self.compressor_current = self.odu_comp_current
-        self.dc_bus_voltage = self.odu_voltage
-        self.t1s_curve_temp = self.idu_t1s1
+        # Do not create alias fields; use original protocol names directly
 
 
 class MessageC3Response(MessageResponse):
@@ -515,7 +560,4 @@ class MessageC3Response(MessageResponse):
             self.set_body(C3DisinfectBody(super().body, data_offset=1))
         elif self.body_type == ListTypes.X10:
             self.set_body(C3UnitParaBody(super().body, data_offset=1))
-        self.set_attr()\r\n
-
-
-
+        self.set_attr()

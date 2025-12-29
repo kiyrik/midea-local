@@ -100,6 +100,8 @@ class MideaC3Device(MideaDevice):
                 DeviceAttributes.status_ibh: None,
                 DeviceAttributes.total_produced_energy: None,
                 DeviceAttributes.outdoor_temperature: None,
+                DeviceAttributes.zone1_curve_type: None,
+                DeviceAttributes.zone2_curve_type: None,
                 DeviceAttributes.error_code: 0,
                 DeviceAttributes.defrosting_status: False,
                 DeviceAttributes.unit_mode_run: None,
@@ -107,13 +109,39 @@ class MideaC3Device(MideaDevice):
                 DeviceAttributes.exv_steps: None,
                 DeviceAttributes.pressure_high: None,
                 DeviceAttributes.pressure_low: None,
-                DeviceAttributes.water_flower: None,
+                DeviceAttributes.water_flow_m3h: None,
                 DeviceAttributes.water_pressure: None,
+                DeviceAttributes.fan_speed: None,
+                DeviceAttributes.supply_voltage: None,
+                DeviceAttributes.dc_current: None,
+                DeviceAttributes.compressor_current: None,
+                DeviceAttributes.dc_bus_voltage: None,
+                DeviceAttributes.current_unit_capacity: None,
+                DeviceAttributes.current_unit_capacity_kw: None,
                 DeviceAttributes.temp_t4: None,
                 DeviceAttributes.temp_t5: None,
                 DeviceAttributes.temp_tw_in: None,
+                DeviceAttributes.temp_tw_out: None,
+                DeviceAttributes.temp_t1: None,
+                DeviceAttributes.temp_t2: None,
+                DeviceAttributes.temp_t2b: None,
+                DeviceAttributes.temp_t3: None,
+                DeviceAttributes.temp_ta: None,
+                DeviceAttributes.temp_th: None,
+                DeviceAttributes.temp_tp: None,
+                DeviceAttributes.temp_tf: None,
+                DeviceAttributes.running_mode_text: None,
                 DeviceAttributes.instant_power0: None,
-                DeviceAttributes.instant_renew_power0: None
+                DeviceAttributes.instant_renew_power0: None,
+                DeviceAttributes.back_oil: False,
+                DeviceAttributes.tbh_enable: False,
+                DeviceAttributes.ibh1_enable: False,
+                DeviceAttributes.dhw_run: False,
+                DeviceAttributes.heat_run: False,
+                DeviceAttributes.cool_run: False,
+                DeviceAttributes.tbh_output: False,
+                DeviceAttributes.ibh2_output: False,
+                DeviceAttributes.ibh1_output: False
             },
         )
         self._default_temperature_step: float = 0.5
@@ -154,6 +182,37 @@ class MideaC3Device(MideaDevice):
             if hasattr(message, str(status)):
                 self._attributes[status] = getattr(message, str(status))
                 new_status[str(status)] = getattr(message, str(status))
+        # Derive running mode text from basic flags when present
+        try:
+            heat = bool(getattr(message, "heat"))
+            dhw = bool(getattr(message, "dhw"))
+            cool = bool(getattr(message, "cool"))
+            if dhw and heat:
+                mode_txt = "DHW+HEAT"
+            elif dhw:
+                mode_txt = "DHW"
+            elif heat:
+                mode_txt = "HEAT"
+            elif cool:
+                mode_txt = "COOL"
+            else:
+                mode_txt = "IDLE"
+            self._attributes[DeviceAttributes.running_mode_text] = mode_txt
+            new_status[DeviceAttributes.running_mode_text.value] = mode_txt
+        except Exception:
+            pass
+        # Fallback: if Energy body didn't provide outdoor_temperature this cycle,
+        # derive from UnitPara ambient temp (temp_ta, signed) when available.
+        if (
+            DeviceAttributes.outdoor_temperature.value not in new_status
+            and hasattr(message, "temp_ta")
+        ):
+            self._attributes[DeviceAttributes.outdoor_temperature] = getattr(
+                message, "temp_ta"
+            )
+            new_status[DeviceAttributes.outdoor_temperature.value] = getattr(
+                message, "temp_ta"
+            )
         if "zone_temp_type" in new_status:
             for zone in [0, 1]:
                 if self._attributes[DeviceAttributes.zone_temp_type][
@@ -273,6 +332,24 @@ class MideaC3Device(MideaDevice):
         elif attr == DeviceAttributes.disinfect:
             message = MessageSetDisinfect(self._message_protocol_version)
             setattr(message, str(attr), value)
+        # Extended: set curve types. Preserve the other type from current attributes.
+        elif attr in [
+            DeviceAttributes.zone1_curve_type.value,
+            DeviceAttributes.zone2_curve_type.value,
+        ]:
+            message = self.make_message_set()
+            z1 = (
+                int(value)
+                if attr == DeviceAttributes.zone1_curve_type.value
+                else self._attributes.get(DeviceAttributes.zone1_curve_type)
+            )
+            z2 = (
+                int(value)
+                if attr == DeviceAttributes.zone2_curve_type.value
+                else self._attributes.get(DeviceAttributes.zone2_curve_type)
+            )
+            message.zone1_curve_type = z1 if z1 is not None else 0
+            message.zone2_curve_type = z2 if z2 is not None else 0
         elif attr in [
             DeviceAttributes.silent_mode.value,
             DeviceAttributes.SILENT_LEVEL.value,
