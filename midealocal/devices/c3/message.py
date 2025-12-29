@@ -408,7 +408,7 @@ class C3UnitParaBody(MessageBody):
         # self.usb_index_max  body[data_offset + 14]
         # self.odu_comp_current  body[data_offset + 16]
         self.odu_voltage = body[data_offset + 17] * 256 + body[data_offset + 18]
-        self.exv_current = body[data_offset + 19] * 256 + body[data_offset + 20]
+        self.exv_steps = body[data_offset + 19] * 256 + body[data_offset + 20]
         self.odu_model = body[data_offset + 21]
         # self.unit_online_num  body[data_offset + 22]
         # self.current_code  body[data_offset + 23]
@@ -470,6 +470,14 @@ class C3UnitParaBody(MessageBody):
             body[data_offset + 85]
         )
 
+        # Derived flags from UnitPara
+        # defrosting_status bit according to Lua (byte 29, bit1)
+        try:
+            self.defrosting_status = (body[data_offset + 29] & 0x02) > 0
+        except Exception:
+            # keep compatibility if payload shorter
+            self.defrosting_status = False
+
 
 class MessageC3Response(MessageResponse):
     """C3 message response."""
@@ -502,4 +510,3 @@ class MessageC3Response(MessageResponse):
             self.fg_defrost = (body[data_offset + 29] & 0x02) > 0
         except Exception:
             self.fg_defrost = False
-
