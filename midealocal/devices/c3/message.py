@@ -406,7 +406,7 @@ class C3UnitParaBody(MessageBody):
         self.hydbox_subtype = body[data_offset + 12]
         self.fg_usb_info_connect = body[data_offset + 13]
         # self.usb_index_max  body[data_offset + 14]
-        # self.odu_comp_current  body[data_offset + 16]
+        self.odu_comp_current = body[data_offset + 16]
         self.odu_voltage = body[data_offset + 17] * 256 + body[data_offset + 18]
         self.exv_steps = body[data_offset + 19] * 256 + body[data_offset + 20]
         self.odu_model = body[data_offset + 21]
@@ -477,6 +477,18 @@ class C3UnitParaBody(MessageBody):
         except Exception:
             # keep compatibility if payload shorter
             self.defrosting_status = False
+        try:
+            self.water_flow_m3h = float(self.water_flower) / 1000.0
+        except Exception:
+            self.water_flow_m3h = None
+        try:
+            self.current_unit_capacity_kw = float(self.current_unit_capacity) / 100.0
+        except Exception:
+            self.current_unit_capacity_kw = None
+        self.supply_voltage = self.sphera_ahs_voltage
+        self.compressor_current = self.odu_comp_current
+        self.dc_bus_voltage = self.odu_voltage
+        self.t1s_curve_temp = self.idu_t1s1
 
 
 class MessageC3Response(MessageResponse):
@@ -503,10 +515,7 @@ class MessageC3Response(MessageResponse):
             self.set_body(C3DisinfectBody(super().body, data_offset=1))
         elif self.body_type == ListTypes.X10:
             self.set_body(C3UnitParaBody(super().body, data_offset=1))
-        self.set_attr()
+        self.set_attr()\r\n
 
-        # Derived flags
-        try:
-            self.fg_defrost = (body[data_offset + 29] & 0x02) > 0
-        except Exception:
-            self.fg_defrost = False
+
+
