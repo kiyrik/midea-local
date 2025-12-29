@@ -577,8 +577,7 @@ class MideaDevice(threading.Thread):
     def update_all(self, status: dict[str, Any]) -> None:
         """Update all."""
         _LOGGER.debug("[%s] Status update: %s", self._device_id, status)
-        for update in self._updates:
-            update(status)
+        for update in self._updates:\n            try:\n                update(status)\n            except Exception as e:\n                _LOGGER.exception("[%s] Update callback failed for %s: %s", self._device_id, update, e)
 
     def set_available(self, available: bool = True) -> None:
         """Set available value."""
@@ -771,3 +770,4 @@ class MideaDevice(threading.Thread):
         for status in self._attributes:
             ret[str(status)] = self._attributes[status]
         return ret
+
