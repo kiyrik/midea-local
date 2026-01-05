@@ -118,18 +118,21 @@ class MideaC3Device(MideaDevice):
                 DeviceAttributes.dc_bus_voltage: None,
                 DeviceAttributes.current_unit_capacity: None,
                 DeviceAttributes.current_unit_capacity_kw: None,
-                DeviceAttributes.temp_t4: None,
-                DeviceAttributes.temp_t5: None,
+                DeviceAttributes.fg_capacity_need: None,
+                DeviceAttributes.temp_t4_outdoor_air: None,
+                DeviceAttributes.temp_t5_tank: None,
                 DeviceAttributes.temp_tw_in: None,
                 DeviceAttributes.temp_tw_out: None,
-                DeviceAttributes.temp_t1: None,
-                DeviceAttributes.temp_t2: None,
-                DeviceAttributes.temp_t2b: None,
-                DeviceAttributes.temp_t3: None,
-                DeviceAttributes.temp_ta: None,
-                DeviceAttributes.temp_th: None,
-                DeviceAttributes.temp_tp: None,
-                DeviceAttributes.temp_tf: None,
+                DeviceAttributes.temp_t1_leaving_water: None,
+                DeviceAttributes.temp_t2_plate_f_out: None,
+                DeviceAttributes.temp_t2b_plate_f_in: None,
+                DeviceAttributes.temp_t3_outdoor_exchanger: None,
+                DeviceAttributes.temp_ta_room: None,
+                DeviceAttributes.temp_th_comp_suction: None,
+                DeviceAttributes.temp_tp_comp_discharge: None,
+                DeviceAttributes.temp_tf_sensor: None,
+                DeviceAttributes.temp_t4_average: None,
+                DeviceAttributes.idu_t1s1: None,
                 DeviceAttributes.running_mode_text: None,
                 DeviceAttributes.instant_power0: None,
                 DeviceAttributes.instant_renew_power0: None,
@@ -206,13 +209,13 @@ class MideaC3Device(MideaDevice):
         # as Lua maps Energy outdoor temp to T4.
         if (
             DeviceAttributes.outdoor_temperature.value not in new_status
-            and hasattr(message, "temp_t4")
+            and hasattr(message, "temp_t4_outdoor_air")
         ):
             self._attributes[DeviceAttributes.outdoor_temperature] = getattr(
-                message, "temp_t4"
+                message, "temp_t4_outdoor_air"
             )
             new_status[DeviceAttributes.outdoor_temperature.value] = getattr(
-                message, "temp_t4"
+                message, "temp_t4_outdoor_air"
             )
         if "zone_temp_type" in new_status:
             for zone in [0, 1]:
@@ -308,6 +311,22 @@ class MideaC3Device(MideaDevice):
         message.zone2_curve = self._attributes[DeviceAttributes.zone2_curve]
         message.tbh = self._attributes[DeviceAttributes.tbh]
         message.fast_dhw = self._attributes[DeviceAttributes.fast_dhw]
+        # Preserve curve types in every X01 Set if we know them to avoid
+        # unexpected resets by the controller when other fields are updated.
+        z1 = self._attributes.get(DeviceAttributes.zone1_curve_type)
+        z2 = self._attributes.get(DeviceAttributes.zone2_curve_type)
+        try:
+            if z1 is not None or z2 is not None:
+                # clamp to 0..10
+                if z1 is not None:
+                    z1 = max(0, min(10, int(z1)))
+                if z2 is not None:
+                    z2 = max(0, min(10, int(z2)))
+                message.zone1_curve_type = z1 if z1 is not None else 0
+                message.zone2_curve_type = z2 if z2 is not None else 0
+        except Exception:
+            # ignore clamping/convert errors, just skip extended bytes
+            pass
         return message
 
     def set_attribute(self, attr: str, value: bool | float | str) -> None:
@@ -316,23 +335,35 @@ class MideaC3Device(MideaDevice):
             MessageSet | MessageSetECO | MessageSetSilent | MessageSetDisinfect | None
         ) = None
         if attr in [
-            DeviceAttributes.zone1_power,
-            DeviceAttributes.zone2_power,
-            DeviceAttributes.dhw_power,
-            DeviceAttributes.zone1_curve,
-            DeviceAttributes.zone2_curve,
-            DeviceAttributes.tbh,
-            DeviceAttributes.fast_dhw,
-            DeviceAttributes.dhw_target_temp,
+            DeviceAttributes.zone1_power.value,
+            DeviceAttributes.zone2_power.value,
+            DeviceAttributes.dhw_power.value,
+            DeviceAttributes.zone1_curve.value,
+            DeviceAttributes.zone2_curve.value,
+            DeviceAttributes.tbh.value,
+            DeviceAttributes.fast_dhw.value,
+            DeviceAttributes.dhw_target_temp.value,
         ]:
             message = self.make_message_set()
-            setattr(message, str(attr), value)
-        elif attr == DeviceAttributes.eco_mode:
+            # Coerce boolean-like to bool for switch attributes
+            if attr in [
+                DeviceAttributes.zone1_power.value,
+                DeviceAttributes.zone2_power.value,
+                DeviceAttributes.dhw_power.value,
+                DeviceAttributes.zone1_curve.value,
+                DeviceAttributes.zone2_curve.value,
+                DeviceAttributes.tbh.value,
+                DeviceAttributes.fast_dhw.value,
+            ]:
+                setattr(message, str(attr), bool(value))
+            else:
+                setattr(message, str(attr), value)
+        elif attr == DeviceAttributes.eco_mode.value:
             message = MessageSetECO(self._message_protocol_version)
-            setattr(message, str(attr), value)
-        elif attr == DeviceAttributes.disinfect:
+            setattr(message, str(DeviceAttributes.eco_mode), bool(value))
+        elif attr == DeviceAttributes.disinfect.value:
             message = MessageSetDisinfect(self._message_protocol_version)
-            setattr(message, str(attr), value)
+            setattr(message, str(DeviceAttributes.disinfect), bool(value))
         # Extended: set curve types. Preserve the other type from current attributes.
         elif attr in [
             DeviceAttributes.zone1_curve_type.value,

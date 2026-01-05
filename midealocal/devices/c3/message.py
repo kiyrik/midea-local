@@ -1,4 +1,4 @@
-﻿"""Midea local C3 message."""
+"""Midea local C3 message."""
 
 from midealocal.const import DeviceType
 from midealocal.message import (
@@ -414,9 +414,9 @@ class C3UnitParaBody(MessageBody):
         self.unit_mode_run = body[data_offset + 1]
         self.fan_speed = body[data_offset + 2] * 10
         self.fg_capacity_need = body[data_offset + 5]
-        self.temp_t3 = s8(body[data_offset + 6])
-        self.temp_t4 = s8(body[data_offset + 7])
-        self.temp_tp = s8(body[data_offset + 8])
+        self.temp_t3_outdoor_exchanger = s8(body[data_offset + 6])
+        self.temp_t4_outdoor_air = s8(body[data_offset + 7])
+        self.temp_tp_comp_discharge = s8(body[data_offset + 8])
         self.temp_tw_in = s8(body[data_offset + 9])
         self.temp_tw_out = s8(body[data_offset + 10])
         self.temp_tsolar = body[data_offset + 11]
@@ -429,18 +429,18 @@ class C3UnitParaBody(MessageBody):
         self.odu_model = body[data_offset + 21]
         # self.unit_online_num  body[data_offset + 22]
         # self.current_code  body[data_offset + 23]
-        self.temp_t1 = s8(body[data_offset + 33])
+        self.temp_t1_leaving_water = s8(body[data_offset + 33])
         self.temp_tw2 = s8(body[data_offset + 34])
-        self.temp_t2 = s8(body[data_offset + 35])
-        self.temp_t2b = s8(body[data_offset + 36])
-        self.temp_t5 = s8(body[data_offset + 37])
-        self.temp_ta = s8(body[data_offset + 38])
+        self.temp_t2_plate_f_out = s8(body[data_offset + 35])
+        self.temp_t2b_plate_f_in = s8(body[data_offset + 36])
+        self.temp_t5_tank = s8(body[data_offset + 37])
+        self.temp_ta_room = s8(body[data_offset + 38])
         self.temp_tb_t1 = body[data_offset + 39]
         self.temp_tb_t2 = body[data_offset + 40]
         self.hydrobox_capacity = body[data_offset + 41]
         self.pressure_high = body[data_offset + 42] * 256 + body[data_offset + 43]
         self.pressure_low = body[data_offset + 44] * 256 + body[data_offset + 45]
-        self.temp_th = s8(body[data_offset + 46])
+        self.temp_th_comp_suction = s8(body[data_offset + 46])
         self.machine_type = body[data_offset + 47]
         self.odu_target_fre = body[data_offset + 48]
         self.dc_current = body[data_offset + 49]
@@ -449,17 +449,17 @@ class C3UnitParaBody(MessageBody):
             self.dc_bus_voltage = int(body[data_offset + 50]) * 10
         except Exception:
             self.dc_bus_voltage = None
-        self.temp_tf = s8(body[data_offset + 51])
+        self.temp_tf_sensor = s8(body[data_offset + 51])
         self.idu_t1s1 = body[data_offset + 52]
         self.idu_t1s2 = body[data_offset + 53]
-        # Water flow raw counter; use water_flow_m3h for scaled value (m�/h)
+        # Water flow raw counter; use water_flow_m3h for scaled value (m?/h)
         self.water_flower = body[data_offset + 54] * 256 + body[data_offset + 55]
         self.odu_plan_vol_lmt = body[data_offset + 56]
         self.current_unit_capacity = (
             (body[data_offset + 57] << 8) + body[data_offset + 58]
         )
         self.sphera_ahs_voltage = body[data_offset + 59]
-        self.temp_t4a_ver = body[data_offset + 60]
+        self.temp_t4_average = body[data_offset + 60]
         self.water_pressure = body[data_offset + 61] * 256 + body[data_offset + 62]
         self.room_rel_hum = body[data_offset + 63]
         self.pwm_pump_out = body[data_offset + 63]
@@ -525,7 +525,7 @@ class C3UnitParaBody(MessageBody):
         except Exception:
             pass
         try:
-            # Scale: raw value / 100.0 → m³/h (matches ~0.62 m³/h when raw ~62)
+            # Scale: raw value / 100.0 ? m�/h (matches ~0.62 m�/h when raw ~62)
             self.water_flow_m3h = float(self.water_flower) / 100.0
         except Exception:
             self.water_flow_m3h = None
