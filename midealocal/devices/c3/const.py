@@ -88,6 +88,18 @@ class DeviceAttributes(StrEnum):
     sys_instant_power = "sys_instant_power"
     sys_instant_copeer = "sys_instant_copeer"
     sys_total_copeer = "sys_total_copeer"
+    sys_heat_ins_hp_capacity = "sys_heat_ins_hp_capacity"
+    sys_heat_ins_renew_power = "sys_heat_ins_renew_power"
+    sys_heat_ins_power = "sys_heat_ins_power"
+    sys_heat_ins_copeer = "sys_heat_ins_copeer"
+    sys_heat_capacity = "sys_heat_capacity"
+    sys_heat_renew_power = "sys_heat_renew_power"
+    sys_heat_elec_consum = "sys_heat_elec_consum"
+    sys_heat_copeer = "sys_heat_copeer"
+    comp_run_total_time0 = "comp_run_total_time0"
+    ibh1_run_total_time0 = "ibh1_run_total_time0"
+    ibh2_run_total_time0 = "ibh2_run_total_time0"
+    tbh_run_total_time0 = "tbh_run_total_time0"
     # IDU curve-derived setpoint (from UNITPARA X10)
     idu_t1s1 = "idu_t1s1"
     # running mode as human readable text derived from flags

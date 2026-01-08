@@ -404,7 +404,7 @@ class C3DisinfectBody(MessageBody):
 
 
 class C3UnitParaBody(MessageBody):
-    """C3 UnitPara message body."""
+    """C3 UnitPara message body for QUERY responses (X10)."""
 
     def __init__(self, body: bytearray, data_offset: int = 0) -> None:
         """Initialize C3 UnitPara message body."""
@@ -492,32 +492,6 @@ class C3UnitParaBody(MessageBody):
             + body[data_offset + 88] * 256
             + body[data_offset + 89]
         ) * 10
-
-        # Aggregates from UP UNITPARA mapping (if present in this variant)
-        try:
-            self.sys_heat_day_renew_power = (
-                (body[data_offset + 42] << 8) + body[data_offset + 43]
-            )
-            self.sys_heat_day_elec_consum = (
-                (body[data_offset + 44] << 8) + body[data_offset + 45]
-            )
-            self.sys_heat_day_copeer = (
-                (body[data_offset + 46] << 8) + body[data_offset + 47]
-            )
-            self.sys_instant_renew_power = (
-                (body[data_offset + 62] << 8) + body[data_offset + 63]
-            )
-            self.sys_instant_power = (
-                (body[data_offset + 64] << 8) + body[data_offset + 65]
-            )
-            self.sys_instant_copeer = (
-                (body[data_offset + 66] << 8) + body[data_offset + 67]
-            )
-            self.sys_total_copeer = (
-                (body[data_offset + 80] << 8) + body[data_offset + 81]
-            )
-        except Exception:
-            pass
         # Additional flags decoded from UnitPara (per Lua mapping)
         try:
             self.defrosting_status = (body[data_offset + 28] & 0x02) > 0
@@ -536,6 +510,313 @@ class C3UnitParaBody(MessageBody):
         # Scale some fields for easier use
         self.water_flow_m3h = float(self.water_flower) / 100.0
         self.current_unit_capacity_kw = float(self.current_unit_capacity) / 100.0
+
+
+class C3UnitParaBodyNotify(MessageBody):
+    """C3 UnitPara body for UP/notify frames (same body type 0x10, message_type notify1)."""
+
+    def __init__(self, body: bytearray, data_offset: int = 0) -> None:
+        """Initialize C3 UnitPara notify body."""
+        super().__init__(body)
+        # Core runtime fields (same layout as Lua UP UNITPARA)
+        self.comp_run_freq = body[data_offset + 0]
+        self.fan_speed = body[data_offset + 1] * 10
+        self.temp_t3_outdoor_exchanger = s8(body[data_offset + 2])
+        self.temp_t4_outdoor_air = s8(body[data_offset + 3])
+        self.temp_tp_comp_discharge = s8(body[data_offset + 4])
+        self.temp_tw_in = s8(body[data_offset + 5])
+        self.temp_tw_out = s8(body[data_offset + 6])
+        self.odu_comp_current = body[data_offset + 7]
+        self.odu_voltage = body[data_offset + 8] * 256 + body[data_offset + 9]
+        self.temp_t1_leaving_water = s8(body[data_offset + 10])
+        # self.temp_tw2 = s8(body[data_offset + 11])  # not exposed
+        self.temp_t2_plate_f_out = s8(body[data_offset + 12])
+        self.temp_t2b_plate_f_in = s8(body[data_offset + 13])
+        self.temp_t5_tank = s8(body[data_offset + 14])
+        self.temp_ta_room = s8(body[data_offset + 15])
+        self.pressure_high = body[data_offset + 16] * 256 + body[data_offset + 17]
+        self.pressure_low = body[data_offset + 18] * 256 + body[data_offset + 19]
+        self.temp_th_comp_suction = s8(body[data_offset + 20])
+        self.odu_target_fre = body[data_offset + 21]
+        self.temp_tf_sensor = s8(body[data_offset + 22])
+        self.idu_t1s1 = body[data_offset + 23]
+        self.idu_t1s2 = body[data_offset + 24]
+        self.water_flower = body[data_offset + 25] * 256 + body[data_offset + 26]
+        self.water_flow_m3h = float(self.water_flower) / 100.0
+        self.current_unit_capacity = (
+            (body[data_offset + 27] << 8) + body[data_offset + 28]
+        )
+        self.current_unit_capacity_kw = float(self.current_unit_capacity) / 100.0
+        self.water_pressure = body[data_offset + 29] * 256 + body[data_offset + 30]
+        self.room_rel_hum = body[data_offset + 31]
+        self.total_electricity0 = (
+            (body[data_offset + 32] << 24)
+            + (body[data_offset + 33] << 16)
+            + (body[data_offset + 34] << 8)
+            + (body[data_offset + 35])
+        )
+        self.total_thermal0 = (
+            (body[data_offset + 36] << 24)
+            + (body[data_offset + 37] << 16)
+            + (body[data_offset + 38] << 8)
+            + (body[data_offset + 39])
+        )
+        # self.sys_heat_day_capacity = (body[data_offset + 40] << 8) + body[data_offset + 41]
+        self.sys_heat_day_renew_power = (
+            (body[data_offset + 42] << 8) + body[data_offset + 43]
+        )
+        self.sys_heat_day_elec_consum = (
+            (body[data_offset + 44] << 8) + body[data_offset + 45]
+        )
+        self.sys_heat_day_copeer = (
+            (body[data_offset + 46] << 8) + body[data_offset + 47]
+        )
+        self.instant_power0 = (
+            (body[data_offset + 48] << 8) + body[data_offset + 49]
+        ) * 10
+        self.instant_renew_power0 = (
+            (body[data_offset + 50] << 8) + body[data_offset + 51]
+        ) * 10
+        self.total_renew_power0 = (
+            body[data_offset + 52] * 16777216
+            + body[data_offset + 53] * 65536
+            + body[data_offset + 54] * 256
+            + body[data_offset + 55]
+        ) * 10
+        self.comp_run_total_time0 = (
+            (body[data_offset + 56] << 8) + body[data_offset + 57]
+        )
+        # self.pwm_pump_out = body[data_offset + 58]  # not exposed
+        self.unit_mode_run = body[data_offset + 59]
+        # self.sys_instant_hp_capacity = (body[data_offset + 60] << 8) + body[data_offset + 61]
+        self.sys_instant_renew_power = (
+            (body[data_offset + 62] << 8) + body[data_offset + 63]
+        )
+        self.sys_instant_power = (
+            (body[data_offset + 64] << 8) + body[data_offset + 65]
+        )
+        self.sys_instant_copeer = (
+            (body[data_offset + 66] << 8) + body[data_offset + 67]
+        )
+        # self.sys_total_hp_capacity = (
+        #     body[data_offset + 68] * 16777216
+        #     + body[data_offset + 69] * 65536
+        #     + body[data_offset + 70] * 256
+        #     + body[data_offset + 71]
+        # )
+        # self.sys_total_heat_capacity = (
+        #     body[data_offset + 72] * 16777216
+        #     + body[data_offset + 73] * 65536
+        #     + body[data_offset + 74] * 256
+        #     + body[data_offset + 75]
+        # )
+        # self.sys_total_power_consum = (
+        #     body[data_offset + 76] * 16777216
+        #     + body[data_offset + 77] * 65536
+        #     + body[data_offset + 78] * 256
+        #     + body[data_offset + 79]
+        # )
+        self.sys_total_copeer = (
+            (body[data_offset + 80] << 8) + body[data_offset + 81]
+        )
+        self.sys_heat_ins_hp_capacity = (body[data_offset + 82] << 8) + body[data_offset + 83]
+        self.sys_heat_ins_renew_power = (body[data_offset + 84] << 8) + body[data_offset + 85]
+        self.sys_heat_ins_power = (body[data_offset + 86] << 8) + body[data_offset + 87]
+        self.sys_heat_ins_copeer = (body[data_offset + 88] << 8) + body[data_offset + 89]
+        self.sys_heat_capacity = (
+            body[data_offset + 90] * 16777216
+            + body[data_offset + 91] * 65536
+            + body[data_offset + 92] * 256
+            + body[data_offset + 93]
+        )
+        self.sys_heat_renew_power = (
+            body[data_offset + 94] * 16777216
+            + body[data_offset + 95] * 65536
+            + body[data_offset + 96] * 256
+            + body[data_offset + 97]
+        )
+        self.sys_heat_elec_consum = (
+            body[data_offset + 98] * 16777216
+            + body[data_offset + 99] * 65536
+            + body[data_offset + 100] * 256
+            + body[data_offset + 101]
+        )
+        self.sys_heat_copeer = (body[data_offset + 102] << 8) + body[data_offset + 103]
+        # self.sys_cool_ins_hp_capacity = (body[data_offset + 104] << 8) + body[data_offset + 105]
+        # self.sys_cool_ins_renew_power = (body[data_offset + 106] << 8) + body[data_offset + 107]
+        # self.sys_cool_ins_power = (body[data_offset + 108] << 8) + body[data_offset + 109]
+        # self.sys_cool_ins_copeer = (body[data_offset + 110] << 8) + body[data_offset + 111]
+        # self.sys_cool_capacity = (
+        #     body[data_offset + 112] * 16777216
+        #     + body[data_offset + 113] * 65536
+        #     + body[data_offset + 114] * 256
+        #     + body[data_offset + 115]
+        # )
+        # self.sys_cool_renew_power = (
+        #     body[data_offset + 116] * 16777216
+        #     + body[data_offset + 117] * 65536
+        #     + body[data_offset + 118] * 256
+        #     + body[data_offset + 119]
+        # )
+        # self.sys_cool_elec_consum = (
+        #     body[data_offset + 120] * 16777216
+        #     + body[data_offset + 121] * 65536
+        #     + body[data_offset + 122] * 256
+        #     + body[data_offset + 123]
+        # )
+        # self.sys_cool_copeer = (body[data_offset + 124] << 8) + body[data_offset + 125]
+        # self.sys_dhw_ins_hp_capacity = (body[data_offset + 126] << 8) + body[data_offset + 127]
+        # self.sys_dhw_ins_renew_power = (body[data_offset + 128] << 8) + body[data_offset + 129]
+        # self.sys_dhw_ins_power = (body[data_offset + 130] << 8) + body[data_offset + 131]
+        # self.sys_dhw_ins_copeer = (body[data_offset + 132] << 8) + body[data_offset + 133]
+        # self.sys_dhw_capacity = (
+        #     body[data_offset + 134] * 16777216
+        #     + body[data_offset + 135] * 65536
+        #     + body[data_offset + 136] * 256
+        #     + body[data_offset + 137]
+        # )
+        # self.sys_dhw_renew_power = (
+        #     body[data_offset + 138] * 16777216
+        #     + body[data_offset + 139] * 65536
+        #     + body[data_offset + 140] * 256
+        #     + body[data_offset + 141]
+        # )
+        # self.sys_dhw_elec_consum = (
+        #     body[data_offset + 142] * 16777216
+        #     + body[data_offset + 143] * 65536
+        #     + body[data_offset + 144] * 256
+        #     + body[data_offset + 145]
+        # )
+        # self.sys_dhw_copeer = (body[data_offset + 146] << 8) + body[data_offset + 147]
+        # self.sys_energy_ana_en = body[data_offset + 148] & 0x01
+        # self.hmi_energy_ana_set_en = body[data_offset + 148] & 0x02
+        # self.sys_heat_week_capacity = (body[data_offset + 149] << 8) + body[data_offset + 150]
+        # self.sys_heat_week_renew_power = (body[data_offset + 151] << 8) + body[data_offset + 152]
+        # self.sys_heat_week_elec_consum = (body[data_offset + 153] << 8) + body[data_offset + 154]
+        # self.sys_heat_week_copeer = (body[data_offset + 155] << 8) + body[data_offset + 156]
+        # self.sys_heat_month_capacity = (body[data_offset + 157] << 8) + body[data_offset + 158]
+        # self.sys_heat_month_renew_power = (body[data_offset + 159] << 8) + body[data_offset + 160]
+        # self.sys_heat_month_elec_consum = (body[data_offset + 161] << 8) + body[data_offset + 162]
+        # self.sys_heat_month_copeer = (body[data_offset + 163] << 8) + body[data_offset + 164]
+        # self.sys_heat_year_capacity = (body[data_offset + 165] << 8) + body[data_offset + 166]
+        # self.sys_heat_year_renew_power = (body[data_offset + 167] << 8) + body[data_offset + 168]
+        # self.sys_heat_year_elec_consum = (body[data_offset + 169] << 8) + body[data_offset + 170]
+        # self.sys_heat_year_copeer = (body[data_offset + 171] << 8) + body[data_offset + 172]
+        # self.sys_cool_day_capacity = (body[data_offset + 173] << 8) + body[data_offset + 174]
+        # self.sys_cool_day_renew_power = (body[data_offset + 175] << 8) + body[data_offset + 176]
+        # self.sys_cool_day_elec_consum = (body[data_offset + 177] << 8) + body[data_offset + 178]
+        # self.sys_cool_day_copeer = (body[data_offset + 179] << 8) + body[data_offset + 180]
+        # self.sys_cool_week_capacity = (body[data_offset + 181] << 8) + body[data_offset + 182]
+        # self.sys_cool_week_renew_power = (body[data_offset + 183] << 8) + body[data_offset + 184]
+        # self.sys_cool_week_elec_consum = (body[data_offset + 185] << 8) + body[data_offset + 186]
+        # self.sys_cool_week_copeer = (body[data_offset + 187] << 8) + body[data_offset + 188]
+        # self.sys_cool_month_capacity = (body[data_offset + 189] << 8) + body[data_offset + 190]
+        # self.sys_cool_month_renew_power = (body[data_offset + 191] << 8) + body[data_offset + 192]
+        # self.sys_cool_month_elec_consum = (body[data_offset + 193] << 8) + body[data_offset + 194]
+        # self.sys_cool_month_copeer = (body[data_offset + 195] << 8) + body[data_offset + 196]
+        # self.sys_cool_year_capacity = (body[data_offset + 197] << 8) + body[data_offset + 198]
+        # self.sys_cool_year_renew_power = (body[data_offset + 199] << 8) + body[data_offset + 200]
+        # self.sys_cool_year_elec_consum = (body[data_offset + 201] << 8) + body[data_offset + 202]
+        # self.sys_cool_year_copeer = (body[data_offset + 203] << 8) + body[data_offset + 204]
+        # self.sys_dhw_day_capacity = (body[data_offset + 205] << 8) + body[data_offset + 206]
+        # self.sys_dhw_day_renew_power = (body[data_offset + 207] << 8) + body[data_offset + 208]
+        # self.sys_dhw_day_elec_consum = (body[data_offset + 209] << 8) + body[data_offset + 210]
+        # self.sys_dhw_day_copeer = (body[data_offset + 211] << 8) + body[data_offset + 212]
+        # self.sys_dhw_week_capacity = (body[data_offset + 213] << 8) + body[data_offset + 214]
+        # self.sys_dhw_week_renew_power = (body[data_offset + 215] << 8) + body[data_offset + 216]
+        # self.sys_dhw_week_elec_consum = (body[data_offset + 217] << 8) + body[data_offset + 218]
+        # self.sys_dhw_week_copeer = (body[data_offset + 219] << 8) + body[data_offset + 220]
+        # self.sys_dhw_month_capacity = (body[data_offset + 221] << 8) + body[data_offset + 222]
+        # self.sys_dhw_month_renew_power = (body[data_offset + 223] << 8) + body[data_offset + 224]
+        # self.sys_dhw_month_elec_consum = (body[data_offset + 225] << 8) + body[data_offset + 226]
+        # self.sys_dhw_month_copeer = (body[data_offset + 227] << 8) + body[data_offset + 228]
+        # self.sys_dhw_year_capacity = (body[data_offset + 229] << 8) + body[data_offset + 230]
+        # self.sys_dhw_year_renew_power = (body[data_offset + 231] << 8) + body[data_offset + 232]
+        # self.sys_dhw_year_elec_consum = (body[data_offset + 233] << 8) + body[data_offset + 234]
+        # self.sys_dhw_year_copeer = (body[data_offset + 235] << 8) + body[data_offset + 236]
+
+
+class C3HMIParaBody(MessageBody):
+    """C3 HMIPara message body (QUERY HMIPARA, body type 0x0A)."""
+
+    def __init__(self, body: bytearray, data_offset: int = 0) -> None:
+        """Initialize C3 HMIPara message body."""
+        super().__init__(body)
+        self.hmi_version_num = body[data_offset + 0]
+        self.comp_run_cur_time0 = (body[data_offset + 1] << 8) + body[data_offset + 2]
+        self.comp_run_total_time0 = (body[data_offset + 3] << 8) + body[data_offset + 4]
+        self.fan_run_total_time0 = (body[data_offset + 5] << 8) + body[data_offset + 6]
+        self.pumpi_run_total_time0 = (body[data_offset + 7] << 8) + body[data_offset + 8]
+        self.ibh1_run_total_time0 = (body[data_offset + 9] << 8) + body[data_offset + 10]
+        self.ibh2_run_total_time0 = (body[data_offset + 11] << 8) + body[data_offset + 12]
+        self.tbh_run_total_time0 = (body[data_offset + 13] << 8) + body[data_offset + 14]
+        self.ahs_run_total_time0 = (body[data_offset + 15] << 8) + body[data_offset + 16]
+        # Phone/service arrays and warning history follow; keep as reference only
+        # self.array_service_tel0 = body[data_offset + 17]
+        # self.array_service_tel1 = body[data_offset + 18]
+        # ...
+        # self.array_service_tel12 = body[data_offset + 29]
+        # self.array_service_cel0 = body[data_offset + 30]
+        # self.array_service_cel1 = body[data_offset + 31]
+        # ...
+        # self.array_service_cel12 = body[data_offset + 42]
+        # self.u8_warn_total = body[data_offset + 43]
+        # self.code_err_prot1 = body[data_offset + 44]
+        # self.warn_address1 = body[data_offset + 45]
+        # self.warn_hour1 = body[data_offset + 46]
+        # self.warn_min1 = body[data_offset + 47]
+        # self.warn_year1 = body[data_offset + 48]
+        # self.warn_month1 = body[data_offset + 49]
+        # self.warn_date1 = body[data_offset + 50]
+        # self.code_err_prot2 = body[data_offset + 51]
+        # self.warn_address2 = body[data_offset + 52]
+        # self.warn_hour2 = body[data_offset + 53]
+        # self.warn_min2 = body[data_offset + 54]
+        # self.warn_year2 = body[data_offset + 55]
+        # self.warn_month2 = body[data_offset + 56]
+        # self.warn_date2 = body[data_offset + 57]
+        # self.code_err_prot3 = body[data_offset + 58]
+        # self.warn_address3 = body[data_offset + 59]
+        # self.warn_hour3 = body[data_offset + 60]
+        # self.warn_min3 = body[data_offset + 61]
+        # self.warn_year3 = body[data_offset + 62]
+        # self.warn_month3 = body[data_offset + 63]
+        # self.warn_date3 = body[data_offset + 64]
+        # self.code_err_prot4 = body[data_offset + 65]
+        # self.warn_address4 = body[data_offset + 66]
+        # self.warn_hour4 = body[data_offset + 67]
+        # self.warn_min4 = body[data_offset + 68]
+        # self.warn_year4 = body[data_offset + 69]
+        # self.warn_month4 = body[data_offset + 70]
+        # self.warn_date4 = body[data_offset + 71]
+        # self.code_err_prot5 = body[data_offset + 72]
+        # self.warn_address5 = body[data_offset + 73]
+        # self.warn_hour5 = body[data_offset + 74]
+        # self.warn_min5 = body[data_offset + 75]
+        # self.warn_year5 = body[data_offset + 76]
+        # self.warn_month5 = body[data_offset + 77]
+        # self.warn_date5 = body[data_offset + 78]
+        # self.code_err_prot6 = body[data_offset + 79]
+        # self.warn_address6 = body[data_offset + 80]
+        # self.warn_hour6 = body[data_offset + 81]
+        # self.warn_min6 = body[data_offset + 82]
+        # self.warn_year6 = body[data_offset + 83]
+        # self.warn_month6 = body[data_offset + 84]
+        # self.warn_date6 = body[data_offset + 85]
+        # self.code_err_prot7 = body[data_offset + 86]
+        # self.warn_address7 = body[data_offset + 87]
+        # self.warn_hour7 = body[data_offset + 88]
+        # self.warn_min7 = body[data_offset + 89]
+        # self.warn_year7 = body[data_offset + 90]
+        # self.warn_month7 = body[data_offset + 91]
+        # self.warn_date7 = body[data_offset + 92]
+        # self.code_err_prot8 = body[data_offset + 93]
+        # self.warn_address8 = body[data_offset + 94]
+        # self.warn_hour8 = body[data_offset + 95]
+        # self.warn_min8 = body[data_offset + 96]
+        # self.warn_year8 = body[data_offset + 97]
+        # self.warn_month8 = body[data_offset + 98]
+        # self.warn_date8 = body[data_offset + 99]
 
 
 class MessageC3Response(MessageResponse):
@@ -560,5 +841,10 @@ class MessageC3Response(MessageResponse):
             self.set_body(C3ECOBody(super().body, data_offset=1))
         elif self.body_type == ListTypes.X09:
             self.set_body(C3DisinfectBody(super().body, data_offset=1))
-        elif self.body_type in (ListTypes.X10, ListTypes.X0B):`n            # Some firmwares push UNITPARA as UP with body 0x0B; decode same`n            self.set_body(C3UnitParaBody(super().body, data_offset=1))
+        elif self.message_type == MessageType.query and self.body_type == ListTypes.X0A:
+            self.set_body(C3HMIParaBody(super().body, data_offset=1))
+        elif self.body_type == ListTypes.X05 and self.message_type == MessageType.notify1:
+            self.set_body(C3UnitParaBodyNotify(super().body, data_offset=1))
+        elif self.body_type == ListTypes.X10 and self.message_type == MessageType.query:
+            self.set_body(C3UnitParaBody(super().body, data_offset=1))
         self.set_attr()

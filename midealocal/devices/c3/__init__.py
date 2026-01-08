@@ -20,6 +20,7 @@ from .message import (
     MessageSetECO,
     MessageSetSilent,
     MessageQueryUnitPara,
+    MessageQueryHMIPara,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -139,6 +140,18 @@ class MideaC3Device(MideaDevice):
                 DeviceAttributes.sys_instant_power: None,
                 DeviceAttributes.sys_instant_copeer: None,
                 DeviceAttributes.sys_total_copeer: None,
+                DeviceAttributes.sys_heat_ins_hp_capacity: None,
+                DeviceAttributes.sys_heat_ins_renew_power: None,
+                DeviceAttributes.sys_heat_ins_power: None,
+                DeviceAttributes.sys_heat_ins_copeer: None,
+                DeviceAttributes.sys_heat_capacity: None,
+                DeviceAttributes.sys_heat_renew_power: None,
+                DeviceAttributes.sys_heat_elec_consum: None,
+                DeviceAttributes.sys_heat_copeer: None,
+                DeviceAttributes.comp_run_total_time0: None,
+                DeviceAttributes.ibh1_run_total_time0: None,
+                DeviceAttributes.ibh2_run_total_time0: None,
+                DeviceAttributes.tbh_run_total_time0: None,
                 DeviceAttributes.idu_t1s1: None,
                 DeviceAttributes.running_mode_text: None,
                 DeviceAttributes.instant_power0: None,
@@ -183,6 +196,7 @@ class MideaC3Device(MideaDevice):
         ]
         if self._enable_advanced_params:
             queries.append(MessageQueryUnitPara(self._message_protocol_version))
+            queries.append(MessageQueryHMIPara(self._message_protocol_version))
         return queries
 
     def process_message(self, msg: bytes) -> dict[str, Any]:
