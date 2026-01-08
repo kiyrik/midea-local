@@ -493,6 +493,31 @@ class C3UnitParaBody(MessageBody):
             + body[data_offset + 89]
         ) * 10
 
+        # Aggregates from UP UNITPARA mapping (if present in this variant)
+        try:
+            self.sys_heat_day_renew_power = (
+                (body[data_offset + 42] << 8) + body[data_offset + 43]
+            )
+            self.sys_heat_day_elec_consum = (
+                (body[data_offset + 44] << 8) + body[data_offset + 45]
+            )
+            self.sys_heat_day_copeer = (
+                (body[data_offset + 46] << 8) + body[data_offset + 47]
+            )
+            self.sys_instant_renew_power = (
+                (body[data_offset + 62] << 8) + body[data_offset + 63]
+            )
+            self.sys_instant_power = (
+                (body[data_offset + 64] << 8) + body[data_offset + 65]
+            )
+            self.sys_instant_copeer = (
+                (body[data_offset + 66] << 8) + body[data_offset + 67]
+            )
+            self.sys_total_copeer = (
+                (body[data_offset + 80] << 8) + body[data_offset + 81]
+            )
+        except Exception:
+            pass
         # Additional flags decoded from UnitPara (per Lua mapping)
         try:
             self.defrosting_status = (body[data_offset + 28] & 0x02) > 0

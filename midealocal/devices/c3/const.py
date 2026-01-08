@@ -80,6 +80,14 @@ class DeviceAttributes(StrEnum):
     temp_tf_sensor = "temp_tf_sensor"
     # Averaged outdoor air (T4) value reported by UNITPARA
     temp_t4_average = "temp_t4_average"
+    # PUSH (UP) UNITPARA aggregates
+    sys_heat_day_renew_power = "sys_heat_day_renew_power"
+    sys_heat_day_elec_consum = "sys_heat_day_elec_consum"
+    sys_heat_day_copeer = "sys_heat_day_copeer"
+    sys_instant_renew_power = "sys_instant_renew_power"
+    sys_instant_power = "sys_instant_power"
+    sys_instant_copeer = "sys_instant_copeer"
+    sys_total_copeer = "sys_total_copeer"
     # IDU curve-derived setpoint (from UNITPARA X10)
     idu_t1s1 = "idu_t1s1"
     # running mode as human readable text derived from flags
