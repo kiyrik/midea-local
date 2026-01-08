@@ -1,4 +1,4 @@
-"""Midea local C3 message."""
+ï»¿"""Midea local C3 message."""
 
 from midealocal.const import DeviceType
 from midealocal.message import (
@@ -345,9 +345,8 @@ class C3EnergyBody(MessageBody):
             + (body[data_offset + 7] << 8)
             + (body[data_offset + 8])
         )
-        base_value = body[data_offset + 9]
-        # outdoor_temperature is t4; signed byte
-        self.outdoor_temperature = float(s8(base_value))
+
+        self.outdoor_temperature = float(s8(body[data_offset + 9]))
         self.zone1_temp_set = float(body[data_offset + 10])
         self.zone2_temp_set = float(body[data_offset + 11])
         self.t5s = body[data_offset + 12]
@@ -444,15 +443,11 @@ class C3UnitParaBody(MessageBody):
         self.machine_type = body[data_offset + 47]
         self.odu_target_fre = body[data_offset + 48]
         self.dc_current = body[data_offset + 49]
-        try:
-            # dcVoltage appears in decivolts; scale to volts
-            self.dc_bus_voltage = int(body[data_offset + 50]) * 10
-        except Exception:
-            self.dc_bus_voltage = None
+        self.dc_bus_voltage = int(body[data_offset + 50]) * 10
         self.temp_tf_sensor = s8(body[data_offset + 51])
         self.idu_t1s1 = body[data_offset + 52]
         self.idu_t1s2 = body[data_offset + 53]
-        # Water flow raw counter; use water_flow_m3h for scaled value (m?/h)
+        # Water flow raw counter; use water_flow_m3h for scaled value (m3/h)
         self.water_flower = body[data_offset + 54] * 256 + body[data_offset + 55]
         self.odu_plan_vol_lmt = body[data_offset + 56]
         self.current_unit_capacity = (
@@ -487,53 +482,35 @@ class C3UnitParaBody(MessageBody):
             + (body[data_offset + 80] << 8)
             + (body[data_offset + 81])
         )
-        self.instant_power0 = (body[data_offset + 82] << 8) + (body[data_offset + 83])
-        self.instant_renew_power0 = (body[data_offset + 84] << 8) + (
+        self.instant_power0 = ((body[data_offset + 82] << 8) + (body[data_offset + 83])) * 10
+        self.instant_renew_power0 = ((body[data_offset + 84] << 8) + (
             body[data_offset + 85]
-        )
-        self.total_renew_power0 = (body[data_offset + 84] << 8) + (
-            body[data_offset + 85]
-        )
+        )) * 10
+        self.total_renew_power0 = (
+            body[data_offset + 86] * 16777216
+            + body[data_offset + 87] * 65536
+            + body[data_offset + 88] * 256
+            + body[data_offset + 89]
+        ) * 10
 
-        # Derived flags from UnitPara
-        # defrosting_status bit according to Lua (byte 29, bit1)
-        # Lua uses 1-based indexing; our body uses data_offset=1, so use +28 here
-        try:
-            self.defrosting_status = (body[data_offset + 28] & 0x02) > 0
-        except Exception:
-            # keep compatibility if payload shorter
-            self.defrosting_status = False
         # Additional flags decoded from UnitPara (per Lua mapping)
         try:
-            b29 = body[data_offset + 28]
-            b30 = body[data_offset + 29]
-            b31 = body[data_offset + 30]
-            b33 = body[data_offset + 32]
-            # Byte 29
-            self.back_oil = (b29 & 0x08) > 0  # fgBackOil, BIT3
-            # Byte 30
-            self.tbh_enable = (b30 & 0x80) > 0  # fgTBHEnable, BIT7
-            self.ibh1_enable = (b30 & 0x04) > 0  # fgIBH1Enable, BIT2
-            # Byte 31
-            self.dhw_run = (b31 & 0x20) > 0  # fgDHWRun, BIT5
-            self.heat_run = (b31 & 0x10) > 0  # fgHeatRun, BIT4
-            self.cool_run = (b31 & 0x08) > 0  # fgCoolRun, BIT3
-            # Byte 33
-            self.tbh_output = (b33 & 0x04) > 0  # fgTBHOutput, BIT2
-            self.ibh2_output = (b33 & 0x02) > 0  # fgIBH2Output, BIT1
-            self.ibh1_output = (b33 & 0x01) > 0  # fgIBH1Output, BIT0
+            self.defrosting_status = (body[data_offset + 28] & 0x02) > 0
+            self.back_oil = (body[data_offset + 28] & 0x08) > 0  # fgBackOil, BIT3
+            self.tbh_enable = (body[data_offset + 29] & 0x80) > 0  # fgTBHEnable, BIT7
+            self.ibh1_enable = (body[data_offset + 29] & 0x04) > 0  # fgIBH1Enable, BIT2
+            self.dhw_run = (body[data_offset + 30] & 0x20) > 0  # fgDHWRun, BIT5
+            self.heat_run = (body[data_offset + 30] & 0x10) > 0  # fgHeatRun, BIT4
+            self.cool_run = (body[data_offset + 30] & 0x08) > 0  # fgCoolRun, BIT3
+            self.tbh_output = (body[data_offset + 32] & 0x04) > 0  # fgTBHOutput, BIT2
+            self.ibh2_output = (body[data_offset + 32] & 0x02) > 0  # fgIBH2Output, BIT1
+            self.ibh1_output = (body[data_offset + 32] & 0x01) > 0  # fgIBH1Output, BIT0
         except Exception:
             pass
-        try:
-            # Scale: raw value / 100.0 ? m³/h (matches ~0.62 m³/h when raw ~62)
-            self.water_flow_m3h = float(self.water_flower) / 100.0
-        except Exception:
-            self.water_flow_m3h = None
-        try:
-            self.current_unit_capacity_kw = float(self.current_unit_capacity) / 100.0
-        except Exception:
-            self.current_unit_capacity_kw = None
-        # Do not create alias fields; use original protocol names directly
+
+        # Scale some fields for easier use
+        self.water_flow_m3h = float(self.water_flower) / 100.0
+        self.current_unit_capacity_kw = float(self.current_unit_capacity) / 100.0
 
 
 class MessageC3Response(MessageResponse):
