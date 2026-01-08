@@ -1,4 +1,4 @@
-﻿"""Midea local C3 message."""
+"""Midea local C3 message."""
 
 from midealocal.const import DeviceType
 from midealocal.message import (
@@ -535,6 +535,5 @@ class MessageC3Response(MessageResponse):
             self.set_body(C3ECOBody(super().body, data_offset=1))
         elif self.body_type == ListTypes.X09:
             self.set_body(C3DisinfectBody(super().body, data_offset=1))
-        elif self.body_type == ListTypes.X10:
-            self.set_body(C3UnitParaBody(super().body, data_offset=1))
+        elif self.body_type in (ListTypes.X10, ListTypes.X0B):`n            # Some firmwares push UNITPARA as UP with body 0x0B; decode same`n            self.set_body(C3UnitParaBody(super().body, data_offset=1))
         self.set_attr()
