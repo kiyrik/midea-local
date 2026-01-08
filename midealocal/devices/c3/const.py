@@ -86,6 +86,9 @@ class DeviceAttributes(StrEnum):
     running_mode_text = "running_mode_text"
     instant_power0 = "instant_power0"
     instant_renew_power0 = "instant_renew_power0"
+    # Cumulative counters from UNITPARA X10
+    total_electricity0 = "total_electricity0"
+    total_thermal0 = "total_thermal0"
     total_renew_power0 = "total_renew_power0"
     # Curve settings (when extended basic body is present)
     zone1_curve_type = "zone1_curve_type"

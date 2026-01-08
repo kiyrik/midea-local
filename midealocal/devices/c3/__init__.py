@@ -136,6 +136,8 @@ class MideaC3Device(MideaDevice):
                 DeviceAttributes.running_mode_text: None,
                 DeviceAttributes.instant_power0: None,
                 DeviceAttributes.instant_renew_power0: None,
+                DeviceAttributes.total_electricity0: None,
+                DeviceAttributes.total_thermal0: None,
                 DeviceAttributes.back_oil: False,
                 DeviceAttributes.tbh_enable: False,
                 DeviceAttributes.ibh1_enable: False,
